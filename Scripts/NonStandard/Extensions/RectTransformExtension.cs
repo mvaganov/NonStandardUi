@@ -10,10 +10,12 @@ namespace NonStandard.Extension {
 		public static void SetLeft(this RectTransform rt, float left) { rt.offsetMin = new Vector2(left, rt.offsetMin.y); }
 		public static void SetRight(this RectTransform rt, float right) { rt.offsetMax = new Vector2(-right, rt.offsetMax.y); }
 		public static void SetBottom(this RectTransform rt, float bottom) { rt.offsetMin = new Vector2(rt.offsetMin.x, bottom); }
-		public static void SetPositionOver(this RectTransform rt, Transform transformIn3d, Camera camera = null) {
+		public static bool SetPositionOver(this RectTransform rt, Transform transformIn3d, Camera camera = null) {
 			if (camera == null) { camera = UiCamera.Get; }
 			Vector2 screenPosition = camera.WorldToScreenPoint(transformIn3d.position);
 			rt.position = screenPosition;
+			// TODO implement screen culling calculation here
+			return true;
 		}
 	}
 }

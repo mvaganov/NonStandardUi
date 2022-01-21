@@ -16,11 +16,17 @@ namespace NonStandard.Ui {
 				allSprites[spriteList[i].name] = spriteList[i] as Sprite;
 			}
 		}
-		public static void SetSpriteByName(GameObject go, string name) {
+		public static Component SetSprite(GameObject go, Sprite sprite) {
+			UiImage uiImage = go.GetComponentInChildren<UiImage>(true);
+			if (uiImage != null) { go = uiImage.gameObject; }
 			Image img = go.GetComponentInChildren<Image>();
-			if (img != null) { img.sprite = GetImageByName(name); return; }
+			if (img != null) { img.sprite = sprite; return img; }
 			SpriteRenderer sr = go.GetComponentInChildren<SpriteRenderer>();
-			if (sr != null) { sr.sprite = GetImageByName(name); return; }
+			if (sr != null) { sr.sprite = sprite; return sr; }
+			return null;
+		}
+		public static void SetSpriteByName(GameObject go, string name) {
+			SetSprite(go, GetImageByName(name));
 		}
 		public static Sprite GetImageByName(string name) {
 			if (allSprites.TryGetValue(name, out Sprite sprite)) { return sprite; }

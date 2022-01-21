@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using NonStandard.Extension;
 
 namespace NonStandard.Ui {
 	public class ModalConfirmation : MonoBehaviour {
@@ -13,6 +12,7 @@ namespace NonStandard.Ui {
 		public GameObject prefab_option;
 		public GameObject uiBlock;
 		public List<Entry> options = new List<Entry>();
+		public UnityEvent onCancel = new UnityEvent();
 
 		public string Text { get => descriptionArea.Text; set => descriptionArea.Text = value; }
 		public Sprite Sprite { get => descriptionArea.Sprite; set => descriptionArea.Sprite = value; }
@@ -24,14 +24,30 @@ namespace NonStandard.Ui {
 			Prompt(text, new List<Entry> {
 				new Entry("OK", () => { onConfirm.Invoke(); Hide(); }),
 				new Entry("Cancel", Hide),
-			});
+			}, icon);
+			this.onCancel.AddListener(options[1].selectionAction.Invoke);
 		}
 		public void CancelOk(string text, Action onConfirm, Sprite icon = null) {
 			Prompt(text, new List<Entry> {
 				new Entry("Cancel", Hide),
 				new Entry("OK", () => { onConfirm.Invoke(); Hide(); }),
-			});
+			}, icon);
+			this.onCancel.AddListener(options[0].selectionAction.Invoke);
 		}
+		public void CancelOk(string text, Action onCancel, Action onConfirm, Sprite icon = null) {
+			Prompt(text, new List<Entry> {
+				new Entry("Cancel", () => { onCancel.Invoke(); Hide(); }),
+				new Entry("OK", () => { onConfirm.Invoke(); Hide(); }),
+			}, icon);
+			this.onCancel.AddListener(options[0].selectionAction.Invoke);
+		}
+		public void Ok(string text, Action onConfirm, Sprite icon = null) {
+			Prompt(text, new List<Entry> {
+				new Entry("OK", () => { onConfirm.Invoke(); Hide(); }),
+			}, icon);
+			this.onCancel.AddListener(options[0].selectionAction.Invoke);
+		}
+		public void Cancel() { onCancel.Invoke(); Hide(); }
 		public void Prompt(string text, List<Entry> options, Sprite icon = null) {
 			descriptionArea.Text = text;
 			//descriptionArea.TextColor = Color.black;
