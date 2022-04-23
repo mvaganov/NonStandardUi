@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -114,7 +115,8 @@ namespace NonStandard.Ui.Mouse {
 			OnDrag(data);
 			if (dynamicMouseCursor && heldDir == Direction2D.None) {
 				MouseCursor mc = MouseCursor.Instance;
-				if (mc != null) { mc.SetCursor(this, MouseCursor.CursorType.Move); }
+				PointerEventData pointer = data as PointerEventData;
+				if (mc != null) { mc.SetCursor(this, MouseCursor.CursorType.Move, pointer.position); }
 			}
 			data.Use();
 		}
@@ -146,7 +148,9 @@ namespace NonStandard.Ui.Mouse {
 		public void FixedUpdate() {
 			if (!disableReize && !pointerDown && heldDir == Direction2D.None && resizeEdgeRadius != 0 && 
 				UiClick.GetMouseDelta() != Vector3.zero) {
-				CursorChangeOnMove(null);
+				PointerEventData ped = new PointerEventData(EventSystem.current);
+				ped.position = UiClick.GetMousePosition();
+				CursorChangeOnMove(ped);
 			}
 		}
 
@@ -178,19 +182,54 @@ namespace NonStandard.Ui.Mouse {
 			//Vector2 mousePosition = Input.mousePosition; // data.position;
 			//mouseCursorState = CalculateEdgeDirection(mousePosition, min, max, resizeEdgeRadius);
 			Vector2 pos = UiClick.GetMousePosition();//AppInput.MousePosition;
-			if (data is PointerEventData ped) { pos = ped.position; }
+			PointerEventData ped = data as PointerEventData;
+			if (ped != null) { pos = ped.position; }
 			mouseCursorState = CalculatePointerOutOfBounds(rt, pos, out Vector2 offset, -resizeEdgeRadius);
-			float r2 = resizeEdgeRadius * 2;
+
+			//float r2 = resizeEdgeRadius * 2;
 			if (Mathf.Abs(offset.x) > resizeEdgeRadius || Mathf.Abs(offset.y) > resizeEdgeRadius) {
 				mouseCursorState = Direction2D.None;
 			}
 			if (!dynamicMouseCursor || mc == null) return;
 			if (mouseCursorState != Direction2D.None) {
-				mc.SetCursor(this, mouseCursorState);
+				MouseCursor.CursorType cType = MouseCursor.TranslateCursor(mouseCursorState);
+				if (ped != null && mouseCursorState == Direction2D.All) {
+					List<RaycastResult> results = new List<RaycastResult>();
+					GraphicRaycaster raycaster = GetComponentInParent<GraphicRaycaster>();
+					if (raycaster == null) {
+						raycaster = EventSystem.current.GetComponent<GraphicRaycaster>();
+					}
+					raycaster.Raycast(ped, results);
+					if (TryGetMouseOverCursor(results, out MouseCursor.CursorType cursorType)) {
+						cType = cursorType;
+					}
+				}
+				mc.SetCursor(this, cType, pos);
 			} else {
-				mc.SetCursor(this, MouseCursor.CursorType.Cursor);
+				//mc.SetCursor(this, MouseCursor.CursorType.Cursor, pos);
 			}
 			data?.Use();
+		}
+
+		public bool TryGetMouseOverCursor(List<RaycastResult> results, out MouseCursor.CursorType cType) {
+			MouseCursor.CursorType foundCursor = cType = MouseCursor.CursorType.No; ;
+			int index = results.FindIndex(0, r => {
+				MouseCursorEnjoyer m = r.gameObject.GetComponent<MouseCursorEnjoyer>();
+				if (m) { foundCursor = m.cursorType; }
+				return m != null;
+			});
+			if (index >= 0) { cType = foundCursor; return true; }
+			index = results.FindIndex(0, r => r.gameObject.GetComponent<Button>() != null);
+			if (index >= 0) { cType = MouseCursor.CursorType.Pointer; return true; }
+			index = results.FindIndex(0, r => r.gameObject.GetComponent<Toggle>() != null);
+			if (index >= 0) { cType = MouseCursor.CursorType.Pointer; return true; }
+			index = results.FindIndex(0, r => r.gameObject.GetComponent<TMPro.TMP_Dropdown>() != null);
+			if (index >= 0) { cType = MouseCursor.CursorType.Pointer; return true; }
+			index = results.FindIndex(0, r => r.gameObject.GetComponent<TMPro.TMP_InputField>() != null);
+			if (index >= 0) { cType = MouseCursor.CursorType.Text; return true; }
+			index = results.FindIndex(0, r => r.gameObject.transform.parent.GetComponent<ScrollRect>() != null);
+			if (index >= 0) { cType = MouseCursor.CursorType.Move2; return true; }
+			return false;
 		}
 
 		public void RefreshContentRect(RectTransform contentRect) {

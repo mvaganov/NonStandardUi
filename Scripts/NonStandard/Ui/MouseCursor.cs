@@ -69,39 +69,60 @@ namespace NonStandard.Ui.Mouse {
 		public class CursorUiRequest {
 			public object source;
 			public CursorType cursor;
+			public Vector2 position;
 			public void Apply(MouseCursor mc) {
 				mc.SetCursor(cursor);
 			}
-			public void Set(MouseCursor mc, CursorType type, bool alsoApply = true) {
+			public void Set(MouseCursor mc, CursorType type, Vector2 position, bool alsoApply = true) {
 				cursor = type;
 				if (alsoApply) { Apply(mc); }
 			}
 		}
 
-		public List<CursorUiRequest> cursorUiRequest = new List<CursorUiRequest>();
+		public List<CursorUiRequest> cursorUiStack = new List<CursorUiRequest>();
 
 		public int CursorUiStackDepth(object source) {
-			for (int i = cursorUiRequest.Count - 1; i >= 0; --i) {
-				if (cursorUiRequest[i].source == source) { return i; }
+			for (int i = cursorUiStack.Count - 1; i >= 0; --i) {
+				if (cursorUiStack[i].source == source) { return i; }
 			}
 			return -1;
 		}
 
-		public CursorUiRequest MostRelevantCursor { get { return cursorUiRequest != null && cursorUiRequest.Count > 0 
-					? cursorUiRequest[cursorUiRequest.Count - 1] : null; } }
+		public CursorUiRequest MostRelevantCursor {
+			get {
+				return (cursorUiStack == null || cursorUiStack.Count == 0) ? null : cursorUiStack[cursorUiStack.Count - 1];
+				//if (cursorUiStack == null || cursorUiStack.Count == 0) return null;
+				//int i = cursorUiStack.Count - 1;
+				//RectTransform rt = null;
+				//do {
+				//	CursorUiRequest cur = cursorUiStack[i];
+				//	if (cur.source is MonoBehaviour mb) {
+				//		rt = mb.GetComponent<RectTransform>();
+				//		Vector2 localMousePosition = rt.InverseTransformPoint(cur.position);
+				//		if (rt.rect.Contains(localMousePosition)) {
+				//			return cur;
+				//		}
+				//	}
+				//	--i;
+				//} while (rt == null && i > 0);
+				//return null;
+			}
+		}
 
 		public CursorUiRequest GetCursorRequest(object source, bool createIfNotFound = false) {
 			int index = CursorUiStackDepth(source);
-			if (index >= 0) return cursorUiRequest[index];
+			if (index >= 0) return cursorUiStack[index];
 			if (createIfNotFound) {
 				CursorUiRequest newOne = new CursorUiRequest { source = source, cursor = CursorType.Cursor };
-				cursorUiRequest.Add(newOne);
+				cursorUiStack.Add(newOne);
 				return newOne;
 			}
 			return null;
 		}
 
-		public Cursor GetCurrentGetCursorData() { return cursors[currentSet].cursors[(int)currentCursor]; }
+		public Cursor GetCurrentGetCursorData() {
+			return cursors[currentSet].cursors[(int)currentCursor];
+		}
 
 		public void SetCursorSet(int cursorSetIndex) {
 			if (currentSet != cursorSetIndex) {
@@ -114,6 +135,7 @@ namespace NonStandard.Ui.Mouse {
 		public void SetCursor(CursorType type) {
 			currentCursor = type;
 			Cursor cursor = GetCurrentGetCursorData();
+			//Debug.Log($"setting cursor {cursor.name}");
 			UnityEngine.Cursor.SetCursor(cursor.texture, cursor.hotspot, CursorMode.Auto);
 		}
 
@@ -125,23 +147,32 @@ namespace NonStandard.Ui.Mouse {
 			if(rotation.Rotating || rotation.Angle != 0) { AddRotator(); }
 		}
 
-		public void SetCursor(object source, Direction2D uiDirection) {
-			SetCursor(source, TranslateCursor(uiDirection));
+		public void SetCursor(object source, Direction2D uiDirection, Vector2 position) {
+			CursorType cType = TranslateCursor(uiDirection);
+			//Debug.Log(uiDirection + " = " + cType);
+			SetCursor(source, cType, position);
 		}
 
-		public void SetCursor(object source, CursorType cursorType) {
+		public void SetCursor(object source, CursorType cursorType, Vector2 position) {
 			CursorUiRequest cursorStackEntry = GetCursorRequest(source, true);
-			bool isTop = MostRelevantCursor.source == source;
-			cursorStackEntry.Set(this, cursorType, isTop);
+
+			cursorStackEntry.Set(this, cursorType, position, true);
+
+
+			////if (cursorStackEntry.cursor == cursorType) { return; }
+			//CursorUiRequest mostRelevant = MostRelevantCursor;
+			//bool isTop = mostRelevant != null && mostRelevant.source == source;
+			//// if (!isTop) { Debug.Log("not setting to "+cursorType+" because "+ MostRelevantCursor.source); }
+			//cursorStackEntry.Set(this, cursorType, position, isTop);
 		}
 
 		public void UnsetCursor(object source) {
 			CursorUiRequest top = MostRelevantCursor;
 			if (top == null) return;
 			if (top.source == source) {
-				cursorUiRequest.RemoveAt(cursorUiRequest.Count - 1);
+				cursorUiStack.RemoveAt(cursorUiStack.Count - 1);
 			}
-			if (cursorUiRequest.Count > 0) {
+			if (cursorUiStack.Count > 0) {
 				top = MostRelevantCursor;
 				top.Apply(this);
 			} else {
@@ -151,7 +182,7 @@ namespace NonStandard.Ui.Mouse {
 
 		public void SetCursor(Direction2D uiDirection) { SetCursor(TranslateCursor(uiDirection)); }
 
-		public CursorType TranslateCursor(Direction2D uiDirection) {
+		public static CursorType TranslateCursor(Direction2D uiDirection) {
 			switch (uiDirection) {
 			case Direction2D.All: return CursorType.Move;
 			case Direction2D.Bottom: return CursorType.Vertical;

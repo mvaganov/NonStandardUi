@@ -83,6 +83,9 @@ namespace NonStandard.Ui {
 			if (x > xMax) { xDelta += (xMax - x); dir |= Direction2D.Right; }
 			if (x < xMin) { xDelta += (xMin - x); dir |= Direction2D.Left; }
 			offset = new Vector2(xDelta, yDelta);
+			if (dir == Direction2D.None && rect.Contains(p)) {
+				dir = Direction2D.All;
+			}
 			return dir;
 		}
 	}
