@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿// code by michael vaganov, released to the public domain via the unlicense (https://unlicense.org/)
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -125,7 +126,7 @@ namespace NonStandard.Ui.Mouse {
 			if (disableDrag) return;
 			//isDragging = true;
 			PointerEventData data = basedata as PointerEventData;
-			if (heldDir == Direction2D.None) {
+			if (heldDir == Direction2D.None || heldDir == Direction2D.All) {
 				base.OnDrag(basedata);
 			} else {
 				ResizeRect(data.delta, heldDir);
