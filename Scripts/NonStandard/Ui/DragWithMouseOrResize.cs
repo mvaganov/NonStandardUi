@@ -146,8 +146,7 @@ namespace NonStandard.Ui.Mouse {
 		}
 
 		public void FixedUpdate() {
-			if (!disableReize && !pointerDown && heldDir == Direction2D.None && resizeEdgeRadius != 0 && 
-				UiClick.GetMouseDelta() != Vector3.zero) {
+			if (!pointerDown && heldDir == Direction2D.None && resizeEdgeRadius != 0 && UiClick.GetMouseDelta() != Vector3.zero) {
 				PointerEventData ped = new PointerEventData(EventSystem.current);
 				ped.position = UiClick.GetMousePosition();
 				CursorChangeOnMove(ped);
@@ -185,6 +184,15 @@ namespace NonStandard.Ui.Mouse {
 			PointerEventData ped = data as PointerEventData;
 			if (ped != null) { pos = ped.position; }
 			mouseCursorState = CalculatePointerOutOfBounds(rt, pos, out Vector2 offset, -resizeEdgeRadius);
+			if (disableReize) {
+				switch (mouseCursorState) {
+					case Direction2D.TopLeft:    case Direction2D.Top:    case Direction2D.TopRight:
+					case Direction2D.Left:                                case Direction2D.Right:
+					case Direction2D.BottomLeft: case Direction2D.Bottom: case Direction2D.BottomRight:
+						mouseCursorState = Direction2D.None;
+						break;
+				}
+			}
 
 			//float r2 = resizeEdgeRadius * 2;
 			if (Mathf.Abs(offset.x) > resizeEdgeRadius || Mathf.Abs(offset.y) > resizeEdgeRadius) {
@@ -227,6 +235,8 @@ namespace NonStandard.Ui.Mouse {
 			if (index >= 0) { cType = MouseCursor.CursorType.Pointer; return true; }
 			index = results.FindIndex(0, r => r.gameObject.GetComponent<TMPro.TMP_InputField>() != null);
 			if (index >= 0) { cType = MouseCursor.CursorType.Text; return true; }
+			index = results.FindIndex(0, r => r.gameObject.transform.parent.GetComponent<Scrollbar>() != null);
+			if (index >= 0) { cType = MouseCursor.CursorType.Cursor; return true; }
 			index = results.FindIndex(0, r => r.gameObject.transform.parent.GetComponent<ScrollRect>() != null);
 			if (index >= 0) { cType = MouseCursor.CursorType.Move2; return true; }
 			return false;
